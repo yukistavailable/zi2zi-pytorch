@@ -9,7 +9,11 @@ from tqdm import tqdm
 import re
 
 
-def pickle_examples_with_split_ratio(paths, train_path, val_path, train_val_split=0.1):
+def pickle_examples_with_split_ratio(
+        paths,
+        train_path,
+        val_path,
+        train_val_split=0.1):
     """
     Compile a list of examples into pickled format, so during
     the training, all io will happen in memory
@@ -38,35 +42,41 @@ def pickle_examples_with_file_name(paths, obj_path):
                 pickle.dump(example, fa)
 
 
-parser = argparse.ArgumentParser(description='Compile list of images into a pickled object for training')
-parser.add_argument('--dir', required=True, help='path of examples')
-parser.add_argument('--save_dir', required=True, help='path to save pickled files')
-parser.add_argument('--split_ratio', type=float, default=0.1, dest='split_ratio',
-                    help='split ratio between train and val')
-
-parser.add_argument('--dst_json', type=str, default=None)
-parser.add_argument('--type_file', type=str, default='type/宋黑类字符集.txt')
-
-parser.add_argument('--save_obj_dir', type=str, default=None)
-
-args = parser.parse_args()
-
-
-def get_special_type():
-
-    with open(args.type_file, 'r', encoding='utf-8') as fp:
-        font_list = [line.strip() for line in fp]
-    '''
-    font_list = os.listdir(args.type_dir)
-    font_list = [f[:f.find('.test.jpg')] for f in font_list]
-    '''
-    font_set = set(font_list)
-    font_dict = {v: k for v, k in enumerate(font_list)}
-    inv_font_dict = {k: v for v, k in font_dict.items()}
-    return font_set, font_dict, inv_font_dict
-
-
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Compile list of images into a pickled object for training')
+    parser.add_argument('--dir', required=True, help='path of examples')
+    parser.add_argument(
+        '--save_dir',
+        required=True,
+        help='path to save pickled files')
+    parser.add_argument(
+        '--split_ratio',
+        type=float,
+        default=0.1,
+        dest='split_ratio',
+        help='split ratio between train and val')
+
+    parser.add_argument('--dst_json', type=str, default=None)
+    parser.add_argument('--type_file', type=str, default='type/宋黑类字符集.txt')
+
+    parser.add_argument('--save_obj_dir', type=str, default=None)
+
+    args = parser.parse_args()
+
+    def get_special_type():
+
+        with open(args.type_file, 'r', encoding='utf-8') as fp:
+            font_list = [line.strip() for line in fp]
+        '''
+        font_list = os.listdir(args.type_dir)
+        font_list = [f[:f.find('.test.jpg')] for f in font_list]
+        '''
+        font_set = set(font_list)
+        font_dict = {v: k for v, k in enumerate(font_list)}
+        inv_font_dict = {k: v for v, k in font_dict.items()}
+        return font_set, font_dict, inv_font_dict
+
     if not os.path.isdir(args.save_dir):
         os.mkdir(args.save_dir)
 
@@ -77,7 +87,7 @@ if __name__ == "__main__":
     ok_fonts = None
 
     dst_json = args.dst_json
-    if not dst_json is None:
+    if dst_json is not None:
         with open(dst_json, 'r', encoding='utf-8') as fp:
             dst_fonts = json.load(fp)
 
@@ -89,7 +99,6 @@ if __name__ == "__main__":
             else:
                 continue
         ok_fonts = set(label_map.keys())
-    
 
     train_path = os.path.join(args.save_dir, "train.obj")
     val_path = os.path.join(args.save_dir, "val.obj")
