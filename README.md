@@ -2,6 +2,20 @@
 
 A zi2zi pytorch implement based on [zi2zi-pytorch](https://github.com/xuan-li/zi2zi-pytorch). Fix some bugs so it can have the same network and performance as the [zi2zi](https://github.com/kaonashi-tyc/zi2zi). Also, integrate some improvement from [Font2font](https://github.com/jasonlo0509/Font2Font).
 
+## 簡単な使い方
+1. フォントファイル(ttfなど)をペア画像に変換
+   1. ```shell
+      python font2img.py --src_font=src.ttf --dst_font=trg.otf --charset=CN --sample_count=1000 --sample_dir=dir --label=0 --filter --shuffle --mode=font2font
+      ```
+2. ペア画像をバイナリに変換し、訓練データとテストデータを得る。split_ratioは訓練データとテストデータの割合
+   1. ```shell
+      python package.py --dir=dir --save_dir=experiment/data/ --split_ratio=0.1
+      ```
+3. 学習
+   1. ```shell
+      python train.py --experiment_dir=experiment  --batch_size=32  --epoch=100 --sample_steps=200  --checkpoint_steps=50 --input_nc=1
+      ```
+
 
 
 ![新楷体——行書-王壯為](results/新楷体——行書-王壯為.png)
