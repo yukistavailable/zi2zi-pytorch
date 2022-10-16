@@ -8,8 +8,16 @@ from torch.optim import lr_scheduler
 class UNetGenerator(nn.Module):
     """Create a Unet-based generator"""
 
-    def __init__(self, input_nc=3, output_nc=3, num_downs=8, ngf=64, embedding_num=40, embedding_dim=128,
-                 norm_layer=nn.BatchNorm2d, use_dropout=False):
+    def __init__(
+            self,
+            input_nc=3,
+            output_nc=3,
+            num_downs=8,
+            ngf=64,
+            embedding_num=40,
+            embedding_dim=128,
+            norm_layer=nn.BatchNorm2d,
+            use_dropout=False):
         """
         Construct a Unet generator
         Parameters:
@@ -25,21 +33,51 @@ class UNetGenerator(nn.Module):
         super(UNetGenerator, self).__init__()
         # construct unet structure
 
-        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer,
-                                             innermost=True, embedding_dim=embedding_dim)  # add the innermost layer
-        for _ in range(num_downs - 5):  # add intermediate layers with ngf * 8 filters
-            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block,
-                                                 norm_layer=norm_layer, use_dropout=use_dropout)
+        unet_block = UnetSkipConnectionBlock(
+            outer_nc=ngf * 8,
+            inner_nc=ngf * 8,
+            input_nc=None,
+            submodule=None,
+            norm_layer=norm_layer,
+            innermost=True,
+            embedding_dim=embedding_dim)  # add the innermost layer
+        for _ in range(
+                num_downs -
+                5):  # add intermediate layers with ngf * 8 filters
+            unet_block = UnetSkipConnectionBlock(
+                outer_nc=ngf * 8,
+                inner_nc=ngf * 8,
+                input_nc=None,
+                submodule=unet_block,
+                norm_layer=norm_layer,
+                use_dropout=use_dropout)
+
         # gradually reduce the number of filters from ngf * 8 to ngf
-        unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8, input_nc=None, submodule=unet_block,
-                                             norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, input_nc=None, submodule=unet_block,
-                                             norm_layer=norm_layer)
-        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block,
-                                             norm_layer=norm_layer)
-        self.model = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block,
-                                             outermost=True,
-                                             norm_layer=norm_layer)  # add the outermost layer
+        unet_block = UnetSkipConnectionBlock(
+            outer_nc=ngf * 4,
+            inner_nc=ngf * 8,
+            input_nc=None,
+            submodule=unet_block,
+            norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock(
+            outer_nc=ngf * 2,
+            inner_nc=ngf * 4,
+            input_nc=None,
+            submodule=unet_block,
+            norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock(
+            outer_nc=ngf,
+            inner_nc=ngf * 2,
+            input_nc=None,
+            submodule=unet_block,
+            norm_layer=norm_layer)
+        self.model = UnetSkipConnectionBlock(
+            outer_nc=output_nc,
+            inner_nc=ngf,
+            input_nc=input_nc,
+            submodule=unet_block,
+            outermost=True,
+            norm_layer=norm_layer)  # add the outermost layer
         self.embedder = nn.Embedding(embedding_num, embedding_dim)
 
     def forward(self, x, style_or_label=None):
@@ -56,9 +94,17 @@ class UnetSkipConnectionBlock(nn.Module):
         |-- downsampling -- |submodule| -- upsampling --|
     """
 
-    def __init__(self, outer_nc, inner_nc, input_nc=None,
-                 submodule=None, outermost=False, innermost=False, embedding_dim=128, norm_layer=nn.BatchNorm2d,
-                 use_dropout=False):
+    def __init__(
+            self,
+            outer_nc,
+            inner_nc,
+            input_nc=None,
+            submodule=None,
+            outermost=False,
+            innermost=False,
+            embedding_dim=128,
+            norm_layer=nn.BatchNorm2d,
+            use_dropout=False):
         """Construct a Unet submodule with skip connections.
         Parameters:
             outer_nc (int) -- the number of filters in the outer conv layer
@@ -73,7 +119,7 @@ class UnetSkipConnectionBlock(nn.Module):
         super(UnetSkipConnectionBlock, self).__init__()
         self.outermost = outermost
         self.innermost = innermost
-        if type(norm_layer) == functools.partial:
+        if isinstance(norm_layer, functools.partial):
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
             use_bias = norm_layer == nn.InstanceNorm2d
@@ -87,6 +133,7 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if outermost:
+            # skip connectionによりチャンネル数がinner_nc * 2となる
             upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1)
@@ -94,6 +141,7 @@ class UnetSkipConnectionBlock(nn.Module):
             up = [uprelu, upconv, nn.Tanh()]
 
         elif innermost:
+            # styleが結合されるのでチャンネル数がinner_nc + embedding_dimとなる
             upconv = nn.ConvTranspose2d(inner_nc + embedding_dim, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1, bias=use_bias)
@@ -101,6 +149,7 @@ class UnetSkipConnectionBlock(nn.Module):
             up = [uprelu, upconv, upnorm]
 
         else:
+            # skip connectionによりチャンネル数がinner_nc * 2となる
             upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1, bias=use_bias)
@@ -115,22 +164,34 @@ class UnetSkipConnectionBlock(nn.Module):
         self.up = nn.Sequential(*up)
 
     def forward(self, x, style=None):
+        # U-NetのUの底のblock, styleを結合する
         if self.innermost:
             encode = self.down(x)
+
+            # styleがNoneのとき、すなわちEncoder部分のみが欲しい場合はここで終了
             if style is None:
                 return encode
-            enc = torch.cat([style.view(style.shape[0], style.shape[1], 1, 1), encode], 1)
+            enc = torch.cat(
+                [style.view(style.shape[0], style.shape[1], 1, 1), encode], 1)
             dec = self.up(enc)
             return torch.cat([x, dec], 1), encode.view(x.shape[0], -1)
+
+        # U-Netの先端のblock
         elif self.outermost:
             enc = self.down(x)
+
+            # styleがNoneのとき、すなわちEncoder部分のみが欲しい場合はup samplingを行わない（下位ブロックを実行し終了）
+            # TODO: pythonは末尾再帰最適化されないので、この書き方はよくない
             if style is None:
                 return self.submodule(enc)
             sub, encode = self.submodule(enc, style)
             dec = self.up(sub)
             return dec, encode
-        else:  # add skip connections
+        else:  # U-Netの中間のblock, xを結合して上位blockに渡すことでskip connectionを実現
             enc = self.down(x)
+
+            # styleがNoneのとき、すなわちEncoder部分のみが欲しい場合はup samplingを行わない（下位ブロックを実行し終了）
+            # TODO: pythonは末尾再帰最適化されないので、この書き方はよくない
             if style is None:
                 return self.submodule(enc)
             sub, encode = self.submodule(enc, style)

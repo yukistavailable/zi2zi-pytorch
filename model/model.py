@@ -10,11 +10,22 @@ import torchvision.utils as vutils
 
 
 class Zi2ZiModel:
-    def __init__(self, input_nc=3, embedding_num=40, embedding_dim=128,
-                 ngf=64, ndf=64,
-                 Lconst_penalty=15, Lcategory_penalty=1, L1_penalty=100,
-                 schedule=10, lr=0.001, gpu_ids=None, save_dir='.', is_training=True,
-                 image_size=256):
+    def __init__(
+            self,
+            input_nc=3,
+            embedding_num=40,
+            embedding_dim=128,
+            ngf=64,
+            ndf=64,
+            Lconst_penalty=15,
+            Lcategory_penalty=1,
+            L1_penalty=100,
+            schedule=10,
+            lr=0.001,
+            gpu_ids=None,
+            save_dir='.',
+            is_training=True,
+            image_size=256):
 
         if is_training:
             self.use_dropout = True
@@ -59,8 +70,10 @@ class Zi2ZiModel:
         init_net(self.netG, gpu_ids=self.gpu_ids)
         init_net(self.netD, gpu_ids=self.gpu_ids)
 
-        self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=self.lr, betas=(0.5, 0.999))
-        self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=self.lr, betas=(0.5, 0.999))
+        self.optimizer_G = torch.optim.Adam(
+            self.netG.parameters(), lr=self.lr, betas=(0.5, 0.999))
+        self.optimizer_D = torch.optim.Adam(
+            self.netD.parameters(), lr=self.lr, betas=(0.5, 0.999))
 
         self.category_loss = CategoryLoss(self.embedding_num)
         self.real_binary_loss = BinaryLoss(True)
@@ -98,7 +111,11 @@ class Zi2ZiModel:
         # generate fake_B
 
         self.fake_B, self.encoded_real_A = self.netG(self.real_A, self.labels)
-        self.encoded_fake_B = self.netG(self.fake_B).view(self.fake_B.shape[0], -1)
+
+        # encoded_fake_Bを得るにはnetGの半分を実行するだけで十分である。styleをNoneにすることでこれを実現している。
+        self.encoded_fake_B = self.netG(
+            self.fake_B).view(
+            self.fake_B.shape[0], -1)
 
     def backward_D(self, no_target_source=False):
 
@@ -108,9 +125,12 @@ class Zi2ZiModel:
         real_D_logits, real_category_logits = self.netD(real_AB)
         fake_D_logits, fake_category_logits = self.netD(fake_AB.detach())
 
-        real_category_loss = self.category_loss(real_category_logits, self.labels)
-        fake_category_loss = self.category_loss(fake_category_logits, self.labels)
-        category_loss = (real_category_loss + fake_category_loss) * self.Lcategory_penalty
+        real_category_loss = self.category_loss(
+            real_category_logits, self.labels)
+        fake_category_loss = self.category_loss(
+            fake_category_logits, self.labels)
+        category_loss = (real_category_loss +
+                         fake_category_loss) * self.Lcategory_penalty
 
         d_loss_real = self.real_binary_loss(real_D_logits)
         d_loss_fake = self.fake_binary_loss(fake_D_logits)
@@ -125,11 +145,14 @@ class Zi2ZiModel:
         fake_D_logits, fake_category_logits = self.netD(fake_AB)
 
         # encoding constant loss
-        # this loss assume that generated imaged and real image should reside in the same space and close to each other
-        const_loss = self.Lconst_penalty * self.mse(self.encoded_real_A, self.encoded_fake_B)
+        # this loss assume that generated imaged and real image should reside
+        # in the same space and close to each other
+        const_loss = self.Lconst_penalty * \
+            self.mse(self.encoded_real_A, self.encoded_fake_B)
         # L1 loss between real and generated images
         l1_loss = self.L1_penalty * self.l1_loss(self.fake_B, self.real_B)
-        fake_category_loss = self.Lcategory_penalty * self.category_loss(fake_category_logits, self.labels)
+        fake_category_loss = self.Lcategory_penalty * \
+            self.category_loss(fake_category_logits, self.labels)
 
         cheat_loss = self.real_binary_loss(fake_D_logits)
 
@@ -145,7 +168,9 @@ class Zi2ZiModel:
             # minimum learning rate guarantee
             update_lr = max(update_lr, 0.0002)
             p['lr'] = update_lr
-            print("Decay net_D learning rate from %.5f to %.5f." % (current_lr, update_lr))
+            print(
+                "Decay net_D learning rate from %.5f to %.5f." %
+                (current_lr, update_lr))
 
         for p in self.optimizer_G.param_groups:
             current_lr = p['lr']
@@ -153,9 +178,13 @@ class Zi2ZiModel:
             # minimum learning rate guarantee
             update_lr = max(update_lr, 0.0002)
             p['lr'] = update_lr
-            print("Decay net_G learning rate from %.5f to %.5f." % (current_lr, update_lr))
+            print(
+                "Decay net_G learning rate from %.5f to %.5f." %
+                (current_lr, update_lr))
 
     def optimize_parameters(self):
+        # Discriminatorの勾配の計算にはGeneratorの勾配が必要。逆は成り立たない。
+
         self.forward()  # compute fake images: G(A)
         # update D
         self.set_requires_grad(self.netD, True)  # enable backprop for D
@@ -163,7 +192,8 @@ class Zi2ZiModel:
         category_loss = self.backward_D()  # calculate gradients for D
         self.optimizer_D.step()  # update D's weights
         # update G
-        self.set_requires_grad(self.netD, False)  # D requires no gradients when optimizing G
+        # D requires no gradients when optimizing G
+        self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()  # set G's gradients to zero
         self.backward_G()  # calculate gradients for G
         self.optimizer_G.step()  # udpate G's weights
@@ -204,7 +234,9 @@ class Zi2ZiModel:
                     num_params += param.numel()
                 if verbose:
                     print(net)
-                print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))
+                print(
+                    '[Network %s] Total number of parameters : %.3f M' %
+                    (name, num_params / 1e6))
         print('-----------------------------------------------')
 
     def save_networks(self, epoch):
@@ -239,7 +271,10 @@ class Zi2ZiModel:
                 if self.gpu_ids and torch.cuda.is_available():
                     net.load_state_dict(torch.load(load_path))
                 else:
-                    net.load_state_dict(torch.load(load_path,map_location=torch.device('cpu')))
+                    net.load_state_dict(
+                        torch.load(
+                            load_path,
+                            map_location=torch.device('cpu')))
                 # net.eval()
         print('load model %d' % epoch)
 
@@ -253,7 +288,9 @@ class Zi2ZiModel:
             for label, image_tensor in zip(batch[0], tensor_to_plot):
                 label_dir = os.path.join(basename, str(label.item()))
                 chk_mkdir(label_dir)
-                vutils.save_image(image_tensor, os.path.join(label_dir, str(cnt) + '.png'))
+                vutils.save_image(
+                    image_tensor, os.path.join(
+                        label_dir, str(cnt) + '.png'))
                 cnt += 1
             # img = vutils.make_grid(tensor_to_plot)
             # vutils.save_image(tensor_to_plot, basename + "_construct.png")

@@ -15,6 +15,10 @@ A zi2zi pytorch implement based on [zi2zi-pytorch](https://github.com/xuan-li/zi
    1. ```shell
       python train.py --experiment_dir=experiment  --batch_size=32  --epoch=100 --sample_steps=200  --checkpoint_steps=50 --input_nc=1
       ```
+2. 予測
+   1. ```shell
+      python infer.py --experiment_dir ../experiment --batch_size 32 --gpu_ids cuda:0 --resume 7400 --src_font sample_fonts/JP_TsunagiGothic.ttf --from_txt --src_txt こんにちは --label 1
+      ```
 
 
 
