@@ -292,15 +292,17 @@ class Zi2ZiModel:
                     image_tensor, os.path.join(
                         label_dir, str(cnt) + '.png'))
                 cnt += 1
-            # img = vutils.make_grid(tensor_to_plot)
-            # vutils.save_image(tensor_to_plot, basename + "_construct.png")
-            '''
-            We don't need generate_img currently.
-            self.set_input(torch.randn(1, self.embedding_num).repeat(batch[0].shape[0], 1), batch[2], batch[1])
-            self.forward()
-            tensor_to_plot = torch.cat([self.fake_B, self.real_A], 3)
-            vutils.save_image(tensor_to_plot, basename + "_generate.png")
-            '''
+        # img = vutils.make_grid(tensor_to_plot)
+        # vutils.save_image(tensor_to_plot, basename + "_construct.png")
+        '''
+        We don't need generate_img currently.
+        self.set_input(torch.randn(1, self.embedding_num).repeat(batch[0].shape[0], 1), batch[2], batch[1])
+        self.forward()
+        tensor_to_plot = torch.cat([self.fake_B, self.real_A], 3)
+        vutils.save_image(tensor_to_plot, basename + "_generate.png")
+        '''
+
+        return self.fake_B
 
 
 def chk_mkdir(path):
