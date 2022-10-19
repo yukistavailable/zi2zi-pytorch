@@ -25,13 +25,15 @@ JP_CHARSET = None
 KR_CHARSET = None
 
 DEFAULT_CHARSET = "./charset/cjk.json"
+JP_DEFAULT_CHARSET = "./charset/jp.json"
 
 
 def load_global_charset():
     global CN_CHARSET, JP_CHARSET, KR_CHARSET, CN_T_CHARSET
     cjk = json.load(open(DEFAULT_CHARSET))
+    jp = json.load(open(JP_DEFAULT_CHARSET))
     CN_CHARSET = cjk["gbk"]
-    JP_CHARSET = cjk["jp"]
+    JP_CHARSET = jp["jp"]
     KR_CHARSET = cjk["kr"]
     CN_T_CHARSET = cjk["gb2312_t"]
 
@@ -91,6 +93,8 @@ def draw_font2font_example(
         filter_hashes):
     dst_img = draw_single_char(ch, dst_font, canvas_size, x_offset, y_offset)
     # check the filter example in the hashes or not
+    if dst_img is None:
+        return None
     dst_hash = hash(dst_img.tobytes())
     if dst_hash in filter_hashes:
         return None
@@ -147,7 +151,10 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
     hash_count = collections.defaultdict(int)
     for c in sample:
         img = draw_single_char(c, font, canvas_size, x_offset, y_offset)
-        hash_count[hash(img.tobytes())] += 1
+        if img is None:
+            hash_count[0] += 1
+        else:
+            hash_count[hash(img.tobytes())] += 1
     recurring_hashes = filter(lambda d: d[1] > 2, hash_count.items())
     return [rh[0] for rh in recurring_hashes]
 
